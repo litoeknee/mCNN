@@ -1,13 +1,10 @@
-package hhbyyh.mCNN
+package org.Spark.toeknee.mCNN
 
+import breeze.linalg.DenseMatrix
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.{SparkContext, SparkConf}
-import breeze.linalg.{DenseMatrix => BDM, kron}
+import org.apache.spark.{SparkConf, SparkContext}
 
-/**
- * Created by yuhao on 9/22/15.
- */
 object printMatrix {
   def main(args: Array[String]) {
     Logger.getLogger("org").setLevel(Level.WARN)
@@ -24,7 +21,7 @@ object printMatrix {
 
     data2.take(10).foreach(record =>{
       println("label: " + record._1)
-      val intm = new BDM[Int](28, 28, record._2.toArray.map(d => d.toInt))
+      val intm = new DenseMatrix(28, 28, record._2.toArray.map(d => d.toInt))
       val str = intm.toString(1000, 1000).replace('0', '.').replace('0', '*')
       println(str)
     })
