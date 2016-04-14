@@ -11,10 +11,10 @@ object Example {
     Logger.getLogger("akka").setLevel(Level.WARN)
     val conf = new SparkConf().setAppName("CNN").setMaster("local[2]")
     val sc = new SparkContext(conf)
-    val lines = sc.textFile("./dataset/train.format", 8)
+    val trainlines = sc.textFile("./dataset/mnist_train_10000.csv", 8)
     // Build data(classification, matrix),matrix is 28*28(0->783)
-    val data = lines.map(line => line.split(",")).map(arr => arr.map(_.toDouble))
-      .map(arr => (arr(784), Vector2Tensor(Vectors.dense(arr.slice(0, 784)))))
+    val traindata = trainlines.map(line => line.split(",")).map(arr => arr.map(_.toDouble))
+      .map(arr => (arr(0), Vector2Tensor(Vectors.dense(arr.slice(1, 785).map(v => if(v > 200) 1.0 else 0)))))
 
     val topology = new CNNTopology
     topology.addLayer(CNNLayer.buildConvolutionLayer(1, 6, new Scale(5, 5)))
@@ -24,24 +24,30 @@ object Example {
     topology.addLayer(CNNLayer.buildConvolutionLayer(12, 12, new Scale(4, 4)))
     val cnn: CNN = new CNN(topology).setMaxIterations(5).setMiniBatchSize(16)
     val start = System.nanoTime()
-    cnn.trainOneByOne(data)
+    cnn.trainOneByOne(traindata)
     println("Training time: " + (System.nanoTime() - start) / 1e9)
 
-    val right = data.map(record =>{
+
+    val testlines = sc.textFile("./dataset/mnist_test_1000.csv", 8)
+    // Build data(classification, matrix),matrix is 28*28(0->783)
+    val testdata = testlines.map(line => line.split(",")).map(arr => arr.map(_.toDouble))
+      .map(arr => (arr(0), Vector2Tensor(Vectors.dense(arr.slice(1, 785).map(v => if(v > 200) 1.0 else 0)))))
+
+    val right = testdata.map(record =>{
       val result = cnn.predict(record._2)
       if(result == record._1) 1 else 0
     }).sum()
-    println(s"Predicting precision: $right " + right.toDouble/(data.count()))
+    println(s"Predicting precision: $right " + right.toDouble/(testdata.count()))
 
 //    val testData = sc.textFile("dataset/mnist/mnist_test.csv", 8)
 //      .map(line => line.split(",")).map(arr => arr.map(_.toDouble))
 //      .map(arr => (arr(0), Example.Vector2Tensor(Vectors.dense(arr.slice(1, 785).map(v => if(v > 200) 1.0 else 0)))))
-
-    val rightM = data.map(record =>{
-      val result = cnn.predict(record._2)
-      if(result == record._1) 1 else 0
-    }).sum()
-    println(s"Mnist Full Predicting precision: $rightM " + rightM.toDouble/(data.count()))
+//
+//    val rightM = data.map(record =>{
+//      val result = cnn.predict(record._2)
+//      if(result == record._1) 1 else 0
+//    }).sum()
+//    println(s"Mnist Full Predicting precision: $rightM " + rightM.toDouble/(data.count()))
   }
 
   /**
