@@ -9,9 +9,10 @@ object Example {
   def main(args: Array[String]) {
     Logger.getLogger("org").setLevel(Level.WARN)
     Logger.getLogger("akka").setLevel(Level.WARN)
-    val conf = new SparkConf().setMaster("local[8]").setAppName("ttt")
+    val conf = new SparkConf().setAppName("CNN").setMaster("local[2]")
     val sc = new SparkContext(conf)
-    val lines = sc.textFile("dataset/train.format", 8)
+    val lines = sc.textFile("./dataset/train.format", 8)
+    // Build data(classification, matrix),matrix is 28*28(0->783)
     val data = lines.map(line => line.split(",")).map(arr => arr.map(_.toDouble))
       .map(arr => (arr(784), Vector2Tensor(Vectors.dense(arr.slice(0, 784)))))
 
@@ -61,8 +62,6 @@ object Example {
     }
     Array(m)
   }
-
-
 }
 
 
