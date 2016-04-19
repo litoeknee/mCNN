@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="spark_CNN:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/spark_CNN_jar</output-path>
+    <root id="archive" name="spark_CNN.jar">
+      <element id="module-output" name="spark_CNN" />
+    </root>
+  </artifact>
+</component>
