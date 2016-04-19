@@ -13,11 +13,11 @@ object printMatrix {
     val sc = new SparkContext(conf)
     val lines = sc.textFile("dataset/mnist/mnist_train.csv", 8)
     val data = lines.map(line => line.split(",")).map(arr => arr.map(_.toDouble))
-      .map(arr => (arr(0), Example.Vector2Tensor(Vectors.dense(arr.slice(1, 785).map(v => if(v > 200) 1.0 else 0)))(0)))
+      .map(arr => (arr(0), mCNN.Vector2Tensor(Vectors.dense(arr.slice(1, 785).map(v => if(v > 200) 1.0 else 0)))(0)))
 
     val lines2 = sc.textFile("dataset/train.format", 8)
     val data2 = lines2.map(line => line.split(",")).map(arr => arr.map(_.toDouble))
-      .map(arr => (arr(784), Example.Vector2Tensor(Vectors.dense(arr.slice(0, 784)))(0)))
+      .map(arr => (arr(784), mCNN.Vector2Tensor(Vectors.dense(arr.slice(0, 784)))(0)))
 
     data2.take(10).foreach(record =>{
       println("label: " + record._1)

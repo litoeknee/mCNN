@@ -93,7 +93,7 @@ class CNN private extends Serializable with Logging{
     }
   }
 
-  def train(trainSet: RDD[(Double, Array[BDM[Double]])]) {
+  def train(trainSet: RDD[(Double, Array[BDM[Double]])], testSet: RDD[(Double, Array[BDM[Double]])]) {
     var t = 0
     val trainSize = trainSet.count().toInt
     val gZero = train(trainSet.first)._2
@@ -104,6 +104,9 @@ class CNN private extends Serializable with Logging{
     )
     var totalCount = 0
     var totalRight = 0
+
+    val start = System.nanoTime()
+
     while (t < maxIterations) {
       val (gradientSum, right, count) = trainSet
         .sample(false, batchSize.toDouble/trainSize, 42 + t)
@@ -132,6 +135,16 @@ class CNN private extends Serializable with Logging{
           totalRight = 0
         }
       }
+
+      println(s"Iteration : $t")
+      println("Training time: " + (System.nanoTime() - start) / 1e9)
+
+      val iterright = testSet.map(record =>{
+        val result = predict(record._2)
+        if(result == record._1) 1 else 0
+      }).sum()
+      val precision = iterright.toDouble / testSet.count()
+      println(s"Predicting precision: $iterright " + precision)
     }
   }
 
