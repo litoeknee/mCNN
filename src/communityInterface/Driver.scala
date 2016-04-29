@@ -25,7 +25,10 @@ import org.apache.spark.{SparkContext, SparkConf}
 object CNNDriver {
 
   def main(args: Array[String]) {
-
+    if (args.length < 5) {
+      System.err.println("Usage: mCNN <training_set> <test_set> <maxIterations> <batchSize> <testInterval> <output>")
+      System.exit(1)
+    }
     val myLayers = new Array[Layer](8)
     myLayers(0) = new ConvolutionalLayer(1, 6, kernelSize = new MapSize(5, 5), inputMapSize = new MapSize(28, 28))
     myLayers(1) = new FunctionalLayer(new SigmoidFunction())
@@ -39,14 +42,16 @@ object CNNDriver {
 
     Logger.getLogger("org").setLevel(Level.WARN)
     Logger.getLogger("akka").setLevel(Level.WARN)
-    val conf = new SparkConf().setMaster("local[8]").setAppName("ttt")
+
+    val conf = new SparkConf().setAppName("CNN")
+//    val conf = new SparkConf().setMaster("local[8]").setAppName("ttt")
     val sc = new SparkContext(conf)
-    val lines = sc.textFile("dataset/train.format", 8)
+    val lines = sc.textFile(args(0), 8)
     val data = lines.map(line => line.split(",")).map(arr => arr.map(_.toDouble))
       .map(arr => {
       val target = new Array[Double](12)
-      target(arr(784).toInt) = 1
-      val in = Vector2BDM(Vectors.dense(arr.slice(0, 784)))
+      target(arr(0).toInt) = 1
+      val in = Vector2BDM(Vectors.dense(arr.slice(1, 785)))
       (Vectors.fromBreeze(in.toDenseVector), Vectors.dense(target))
     }).cache()
 

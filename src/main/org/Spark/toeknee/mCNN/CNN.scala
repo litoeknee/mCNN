@@ -93,7 +93,7 @@ class CNN private extends Serializable with Logging{
     }
   }
 
-  def train(trainSet: RDD[(Double, Array[BDM[Double]])], testSet: RDD[(Double, Array[BDM[Double]])]) {
+  def train(trainSet: RDD[(Double, Array[BDM[Double]])], testSet: RDD[(Double, Array[BDM[Double]])], testInterval: Int) {
     var t = 0
     val trainSize = trainSet.count().toInt
     val gZero = train(trainSet.first)._2
@@ -105,9 +105,8 @@ class CNN private extends Serializable with Logging{
     var totalCount = 0
     var totalRight = 0
 
-    val start = System.nanoTime()
-
     while (t < maxIterations) {
+      val start = System.nanoTime()
       val (gradientSum, right, count) = trainSet
         .sample(false, batchSize.toDouble/trainSize, 42 + t)
         .treeAggregate((gZero, 0, 0))(
@@ -124,8 +123,9 @@ class CNN private extends Serializable with Logging{
       if (count > 0){
         updateParams(gradientSum, count)
         val p = 1.0 * totalRight / totalCount
-        if (t % 10 == 1 && p > 0.96) {
-          ALPHA = 0.001 + ALPHA * 0.9
+//        println(s"totalRight / totalCount : $totalRight $totalCount $p")
+        if (t % 1000 == 1 && p > 0.97) {
+          ALPHA = 0.001 + ALPHA * 0.95
         }
         totalCount += count
         totalRight += right
@@ -135,16 +135,18 @@ class CNN private extends Serializable with Logging{
           totalRight = 0
         }
       }
+      if (t%testInterval == 0) {
+        println(s"Iteration : $t")
+        println("ALPHA: " + ALPHA)
+        println("Training time: " + ((System.nanoTime() - start) / 1e9))
 
-      println(s"Iteration : $t")
-      println("Training time: " + (System.nanoTime() - start) / 1e9)
-
-      val iterright = testSet.map(record =>{
-        val result = predict(record._2)
-        if(result == record._1) 1 else 0
-      }).sum()
-      val precision = iterright.toDouble / testSet.count()
-      println(s"Predicting precision: $iterright " + precision)
+        val iterright = testSet.map(record => {
+          val result = predict(record._2)
+          if (result == record._1) 1 else 0
+        }).sum()
+        val precision = iterright.toDouble / testSet.count()
+        println(s"Predicting precision: $iterright " + precision)
+      }
     }
   }
 

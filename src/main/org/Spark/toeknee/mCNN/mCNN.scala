@@ -3,15 +3,15 @@ package org.Spark.toeknee.mCNN
 import breeze.linalg.{DenseMatrix => BDM}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 
 object mCNN {
   def main(args: Array[String]) {
     Logger.getLogger("org").setLevel(Level.WARN)
     Logger.getLogger("akka").setLevel(Level.WARN)
 
-    if (args.length < 3) {
-      System.err.println("Usage: mCNN <training_set> <test_set> <maxIterations> <output>")
+    if (args.length < 5) {
+      System.err.println("Usage: mCNN <training_set> <test_set> <maxIterations> <batchSize> <testInterval> <output>")
       System.exit(1)
     }
 
@@ -22,6 +22,7 @@ object mCNN {
     // Build data(classification, matrix),matrix is 28*28(0->783)
     val traindata = trainlines.map(line => line.split(",")).map(arr => arr.map(_.toDouble))
       .map(arr => (arr(0), Vector2Tensor(Vectors.dense(arr.slice(1, 785).map(v => if (v > 200) 1.0 else 0)))))
+      .partitionBy(new HashPartitioner(10)).cache()
 
     var i = 1
     var precision = 1.0
@@ -31,17 +32,18 @@ object mCNN {
     topology.addLayer(CNNLayer.buildConvolutionLayer(6, 12, new Scale(5, 5)))
     topology.addLayer(CNNLayer.buildMeanPoolingLayer(new Scale(2, 2)))
     topology.addLayer(CNNLayer.buildConvolutionLayer(12, 12, new Scale(4, 4)))
-    val cnn: CNN = new CNN(topology).setMaxIterations(args(2).toInt).setMiniBatchSize(16)
+    val cnn: CNN = new CNN(topology).setMaxIterations(args(2).toInt).setMiniBatchSize(args(3).toInt)
 
     val testlines = sc.textFile(args(1), 8)
     // Build data(classification, matrix),matrix is 28*28(0->783)
     val testdata = testlines.map(line => line.split(",")).map(arr => arr.map(_.toDouble))
       .map(arr => (arr(0), Vector2Tensor(Vectors.dense(arr.slice(1, 785).map(v => if (v > 200) 1.0 else 0)))))
+      .partitionBy(new HashPartitioner(10)).cache()
 
     val start = System.nanoTime()
 
     //    cnn.trainOneByOne(traindata)
-    cnn.train(traindata, testdata)
+    cnn.train(traindata, testdata, args(4).toInt)
     println("Training time: " + (System.nanoTime() - start) / 1e9)
 
     val right = testdata.map(record => {
